@@ -1,0 +1,76 @@
+{
+  "name": "imgdo",
+  "displayName": "ImgDo",
+  "description": "Vscode插件ImgDo — 可扩展的图片工具集（当前含：项目图片压缩、一键替换）",
+  "version": "0.1.1",
+  "publisher": "xydideo",
+  "author": "xydideo",
+  "license": "MIT",
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xydideo/imgdo_vscode.git"
+  },
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:imageCompress.openPanel",
+    "onCommand:imageCompress.openFolder"
+  ],
+  "main": "./ImgDo/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "imageCompress.openPanel",
+        "title": "打开图片压缩",
+        "category": "ImgDo"
+      },
+      {
+        "command": "imageCompress.openFolder",
+        "title": "在图片压缩中打开",
+        "category": "ImgDo"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "imageCompress.openFolder",
+          "when": "explorerResourceIsFolder",
+          "group": "navigation@99"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "watch": "node esbuild.config.mjs --watch",
+    "package": "vsce package",
+    "publish:vscode": "vsce publish",
+    "publish:cursor": "ovsx publish",
+    "publish:openvsx": "ovsx publish",
+    "publish:all": "npm run publish:vscode && npm run publish:cursor",
+    "vscode:prepublish": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/upng-js": "^2.1.5",
+    "@types/vscode": "^1.74.0",
+    "@vscode/vsce": "^2.32.0",
+    "esbuild": "^0.25.0",
+    "ovsx": "^0.9.4",
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "@jsquash/jpeg": "^1.4.0",
+    "@jsquash/oxipng": "^2.3.0",
+    "@jsquash/webp": "^1.4.0",
+    "ignore": "^7.0.9",
+    "image-size": "^1.1.1",
+    "jszip": "^3.10.1",
+    "upng-js": "^2.1.0"
+  }
+}
