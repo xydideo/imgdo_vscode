@@ -18,6 +18,7 @@
     "Other"
   ],
   "activationEvents": [
+    "onView:imgdo.sidebar",
     "onCommand:imageCompress.openPanel",
     "onCommand:imageCompress.openFolder",
     "onCommand:imageIco.openPanel",
@@ -53,6 +54,24 @@
         "category": "ImgDo"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "imgdo",
+          "title": "ImgDo",
+          "icon": "media/activitybar.svg"
+        }
+      ]
+    },
+    "views": {
+      "imgdo": [
+        {
+          "id": "imgdo.sidebar",
+          "name": "图片压缩",
+          "type": "webview"
+        }
+      ]
+    },
     "menus": {
       "explorer/context": [
         {
@@ -61,7 +80,14 @@
           "group": "navigation@99"
         }
       ]
-    }
+    },
+    "keybindings": [
+      {
+        "command": "imageCompress.openPanel",
+        "key": "ctrl+shift+9",
+        "mac": "cmd+shift+9"
+      }
+    ]
   },
   "scripts": {
     "build": "node esbuild.config.mjs",

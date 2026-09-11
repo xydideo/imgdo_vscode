@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <!-- 整体放大贴边：► 图 ◄ -->
+  <path fill="currentColor" d="M4.6 12 L0.4 7.4 L0.4 16.6 Z"/>
+  <path fill="currentColor" d="M19.4 12 L23.6 7.4 L23.6 16.6 Z"/>
+  <path
+    fill="currentColor"
+    fill-rule="evenodd"
+    d="M5.6 3.4A1.4 1.4 0 0 1 7 2h10a1.4 1.4 0 0 1 1.4 1.4v15.2A1.4 1.4 0 0 1 17 20H7a1.4 1.4 0 0 1-1.4-1.4V3.4ZM7 3.2a.2.2 0 0 0-.2.2v15.2c0 .11.09.2.2.2h10a.2.2 0 0 0 .2-.2V3.4a.2.2 0 0 0-.2-.2H7Z"
+  />
+  <circle fill="currentColor" cx="9.8" cy="8.2" r="1.7"/>
+  <path fill="currentColor" d="M7.4 17.4 L11.2 12.4 L13.6 15.2 L16 12 L18.6 17.4 Z"/>
+</svg>
