@@ -6,6 +6,8 @@
 > 作者 / Publisher：`xydideo`（已写入 `package.json` 的 `publisher` 与 `author`）。  
 > 上架时请在 VS Code Marketplace 与 Open VSX 创建同名 Publisher / Namespace：`xydideo`。
 
+> https://marketplace.visualstudio.com/manage
+> https://open-vsx.org/
 ---
 
 ## 总览

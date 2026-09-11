@@ -2,7 +2,7 @@
   "name": "imgdo",
   "displayName": "ImgDo",
   "description": "Vscode插件ImgDo — 可扩展的图片工具集（图片压缩、ICO 生成、Base64 转化）",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "publisher": "xydideo",
   "author": "xydideo",
   "license": "MIT",
