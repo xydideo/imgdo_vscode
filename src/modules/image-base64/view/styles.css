@@ -1,0 +1,216 @@
+/* ========== Base64 转化 ========== */
+.b64-page {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.b64-panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px 16px;
+}
+
+.b64-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.b64-heading {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--teal-700);
+}
+
+.b64-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.b64-stack.b64-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-items: stretch;
+}
+
+@media (max-width: 720px) {
+  .b64-stack.b64-split {
+    grid-template-columns: 1fr;
+  }
+}
+
+.b64-block {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.b64-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 32px;
+  flex-shrink: 0;
+  margin-bottom: 8px;
+}
+
+.b64-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--teal-700);
+  line-height: 1;
+}
+
+.b64-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+}
+
+.b64-card-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.b64-drop {
+  position: relative;
+  flex: 1;
+  min-height: 160px;
+  border-radius: var(--radius);
+  border: 1.5px dashed color-mix(in srgb, var(--teal-400) 55%, transparent);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55), transparent),
+    radial-gradient(ellipse at 30% 20%, rgba(79, 191, 173, 0.14), transparent 55%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px;
+  overflow: hidden;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.b64-drop.dragover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+  transform: translateY(-1px);
+}
+
+.b64-drop.has-image {
+  border-style: solid;
+}
+
+.b64-drop.awaiting,
+.b64-drop.is-loading {
+  border-style: solid;
+  border-color: var(--border);
+}
+
+.b64-drop img {
+  max-width: 100%;
+  max-height: 140px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.b64-drop-pulse {
+  position: absolute;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  animation: b64-ring 2s ease-out infinite;
+  pointer-events: none;
+}
+
+.b64-editor {
+  flex: 1;
+  min-height: 160px;
+  width: 100%;
+}
+
+.b64-thumb {
+  flex: 1;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  padding: 12px;
+  display: grid;
+  place-items: center;
+  min-height: 160px;
+}
+
+.b64-thumb img {
+  max-width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+}
+
+.b64-spinner {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  animation: b64-spin 0.7s linear infinite;
+}
+
+.convert-fade {
+  animation: b64-fade-in 0.22s ease;
+}
+
+.convert-pop {
+  animation: b64-pop-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes b64-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes b64-ring {
+  0% {
+    transform: scale(0.55);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+@keyframes b64-fade-in {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes b64-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

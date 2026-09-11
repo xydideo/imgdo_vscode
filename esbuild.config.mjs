@@ -7,6 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const watch = process.argv.includes('--watch');
 const OUT = 'ImgDo';
 const MODULE_OUT = path.join(OUT, 'modules', 'image-compress');
+const WEBVIEW_OUT = path.join(OUT, 'webview');
 
 function copyDir(src, dest) {
   fs.mkdirSync(dest, { recursive: true });
@@ -47,11 +48,18 @@ function copyImageCompressWasm() {
   }
 }
 
-function copyImageCompressWebviewAssets() {
-  const srcDir = path.join(__dirname, 'src/modules/image-compress/webview');
-  const destDir = path.join(__dirname, MODULE_OUT, 'webview');
+function copyWebviewAssets() {
+  const destDir = path.join(__dirname, WEBVIEW_OUT);
   fs.mkdirSync(destDir, { recursive: true });
-  fs.copyFileSync(path.join(srcDir, 'styles.css'), path.join(destDir, 'styles.css'));
+  const copies = [
+    ['src/shell/styles/base.css', 'base.css'],
+    ['src/modules/image-compress/view/styles.css', 'compress.css'],
+    ['src/modules/image-ico/view/styles.css', 'ico.css'],
+    ['src/modules/image-base64/view/styles.css', 'base64.css'],
+  ];
+  for (const [fromRel, toName] of copies) {
+    fs.copyFileSync(path.join(__dirname, fromRel), path.join(destDir, toName));
+  }
 }
 
 const shared = {
@@ -81,8 +89,8 @@ const contexts = await Promise.all([
   }),
   esbuild.context({
     ...shared,
-    entryPoints: ['src/modules/image-compress/webview/main.ts'],
-    outfile: path.join(MODULE_OUT, 'webview/main.js'),
+    entryPoints: ['src/main.ts'],
+    outfile: path.join(WEBVIEW_OUT, 'main.js'),
     platform: 'browser',
     format: 'iife',
     target: 'es2020',
@@ -91,7 +99,7 @@ const contexts = await Promise.all([
 
 function prepareModuleAssets() {
   copyImageCompressWasm();
-  copyImageCompressWebviewAssets();
+  copyWebviewAssets();
 }
 
 prepareModuleAssets();

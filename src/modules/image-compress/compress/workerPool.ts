@@ -95,13 +95,22 @@ export class WorkerPool {
     }
     this.ensureWorkers();
     return new Promise((resolve, reject) => {
+      if (this.closed) {
+        reject(new Error('cancelled'));
+        return;
+      }
       this.queue.push({ req, resolve, reject });
       this.pump();
     });
   }
 
-  /** 清空排队任务并强制结束正在跑的 Worker，使取消立即生效 */
+  isClosed(): boolean {
+    return this.closed;
+  }
+
+  /** 清空排队任务并强制结束正在跑的 Worker；关闭池，禁止再 enqueue */
   cancelAll() {
+    this.closed = true;
     const err = new Error('cancelled');
     while (this.queue.length) {
       this.queue.shift()!.reject(err);
@@ -122,7 +131,6 @@ export class WorkerPool {
     this.idle = [];
     this.workers = [];
     this.busy.clear();
-    this.closed = false;
   }
 
   async dispose() {

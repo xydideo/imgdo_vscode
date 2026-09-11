@@ -99,12 +99,41 @@ export type WebviewToHost =
   | { type: 'excludeFromQueue'; id: string }
   | { type: 'excludeFromReplace'; id: string }
   | { type: 'confirmReplace' }
-  | { type: 'resetToEntry' };
+  | { type: 'resetToEntry' }
+  /** 图片转化：选择源图 */
+  | { type: 'convertPickImage' }
+  /** 图片转化：从本地路径加载（拖入资源管理器文件时） */
+  | { type: 'convertLoadFromPath'; path: string }
+  /** 图片转化：保存转化结果（base64 裸串，不含 data: 前缀） */
+  | {
+      type: 'convertSave';
+      base64: string;
+      suggestedName: string;
+      mime: string;
+      /** 若提供，则保存到该文件所在目录（同名 .ico），不弹对话框 */
+      besidePath?: string;
+    };
 
 /** Host -> Webview */
 export type HostToWebview =
-  | { type: 'init'; canScanWorkspace: boolean; workspaceLabel?: string }
+  | {
+      type: 'init';
+      canScanWorkspace: boolean;
+      workspaceLabel?: string;
+      /** 打开面板时默认功能 Tab */
+      feature?: 'compress' | 'ico' | 'base64';
+      defaultSaveDir?: string;
+    }
   | { type: 'settings'; settings: AppSettings }
+  | {
+      type: 'convertImagePicked';
+      path: string;
+      name: string;
+      /** data URL，含 mime */
+      dataUrl: string;
+    }
+  | { type: 'convertSaved'; path: string }
+  | { type: 'convertSaveError'; message: string }
   | { type: 'scanStarted' }
   | { type: 'scanProgress'; current: number; message: string }
   | { type: 'scanResult'; items: ImageItem[]; summary: ScanSummary }

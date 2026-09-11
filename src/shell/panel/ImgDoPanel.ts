@@ -9,21 +9,23 @@ import {
   ImageItem,
   QUALITY_STEP,
   WebviewToHost,
-} from './messages';
-import { loadSettings, saveSettings } from '../config/settings';
-import { collectImages } from '../scan/collectImages';
-import { WorkerPool } from '../compress/workerPool';
-import { writeCompressMetadata } from '../compress/metadata';
-import { applyReplace } from '../replace/applyReplace';
+} from '../../modules/image-compress/panel/messages';
+import { loadSettings, saveSettings } from '../../modules/image-compress/config/settings';
+import { collectImages } from '../../modules/image-compress/scan/collectImages';
+import { WorkerPool } from '../../modules/image-compress/compress/workerPool';
+import { writeCompressMetadata } from '../../modules/image-compress/compress/metadata';
+import { applyReplace } from '../../modules/image-compress/replace/applyReplace';
 import {
-  resolveImageCompressWasmRoot,
-  resolveImageCompressWebviewDir,
-  resolveImageCompressWorker,
   IMAGE_COMPRESS_OUT_DIR,
-} from '../paths';
+  resolveImageCompressWasmRoot,
+  resolveImageCompressWorker,
+  resolveWebviewDir,
+} from './paths';
 
-export class ImageCompressPanel {
-  public static current: ImageCompressPanel | undefined;
+export type ImgDoFeature = 'compress' | 'ico' | 'base64';
+
+export class ImgDoPanel {
+  public static current: ImgDoPanel | undefined;
 
   private readonly panel: vscode.WebviewPanel;
   private readonly context: vscode.ExtensionContext;
@@ -35,11 +37,18 @@ export class ImageCompressPanel {
   private cacheDir = '';
   private cancelling = false;
   private pool: WorkerPool | undefined;
+  /** 打开面板时希望 webview 落在的功能 Tab */
+  private pendingFeature: ImgDoFeature = 'compress';
 
-  private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext) {
+  private constructor(
+    panel: vscode.WebviewPanel,
+    context: vscode.ExtensionContext,
+    feature: ImgDoFeature = 'compress'
+  ) {
     this.panel = panel;
     this.context = context;
     this.settings = loadSettings(context);
+    this.pendingFeature = feature;
 
     this.panel.webview.html = this.getHtml();
     this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
@@ -50,20 +59,31 @@ export class ImageCompressPanel {
     );
   }
 
-  public static createOrShow(context: vscode.ExtensionContext, folderPath?: string) {
+  public static createOrShow(
+    context: vscode.ExtensionContext,
+    folderPath?: string,
+    feature: ImgDoFeature = 'compress'
+  ) {
     const column = vscode.window.activeTextEditor?.viewColumn ?? vscode.ViewColumn.One;
 
-    if (ImageCompressPanel.current) {
-      ImageCompressPanel.current.panel.reveal(column);
+    if (ImgDoPanel.current) {
+      ImgDoPanel.current.pendingFeature = feature;
+      ImgDoPanel.current.panel.title = 'ImgDo';
+      ImgDoPanel.current.panel.reveal(column);
+      ImgDoPanel.current.post({
+        type: 'init',
+        ...ImgDoPanel.current.workspaceInfo(),
+        feature,
+      });
       if (folderPath) {
-        void ImageCompressPanel.current.scanFolder(folderPath);
+        void ImgDoPanel.current.scanFolder(folderPath);
       }
-      return ImageCompressPanel.current;
+      return ImgDoPanel.current;
     }
 
     const panel = vscode.window.createWebviewPanel(
       'imageCompress',
-      'ImgDo · 图片压缩',
+      'ImgDo',
       column,
       {
         enableScripts: true,
@@ -79,11 +99,11 @@ export class ImageCompressPanel {
       }
     );
 
-    ImageCompressPanel.current = new ImageCompressPanel(panel, context);
+    ImgDoPanel.current = new ImgDoPanel(panel, context, feature);
     if (folderPath) {
-      void ImageCompressPanel.current.scanFolder(folderPath);
+      void ImgDoPanel.current.scanFolder(folderPath);
     }
-    return ImageCompressPanel.current;
+    return ImgDoPanel.current;
   }
 
   private post(msg: HostToWebview) {
@@ -94,28 +114,48 @@ export class ImageCompressPanel {
     return this.panel.webview.asWebviewUri(vscode.Uri.file(filePath)).toString();
   }
 
-  private workspaceInfo(): { canScanWorkspace: boolean; workspaceLabel?: string } {
+  private workspaceInfo(): {
+    canScanWorkspace: boolean;
+    workspaceLabel?: string;
+    defaultSaveDir: string;
+  } {
     const folders = vscode.workspace.workspaceFolders;
+    const defaultSaveDir = folders?.[0]?.uri.fsPath ?? os.homedir();
     if (!folders || folders.length === 0) {
-      return { canScanWorkspace: false };
+      return { canScanWorkspace: false, defaultSaveDir };
     }
     if (folders.length === 1) {
       return {
         canScanWorkspace: true,
         workspaceLabel: folders[0].name,
+        defaultSaveDir,
       };
     }
-    return { canScanWorkspace: false };
+    return { canScanWorkspace: false, defaultSaveDir };
   }
 
   private async onMessage(msg: WebviewToHost) {
     switch (msg.type) {
       case 'ready': {
         const info = this.workspaceInfo();
-        this.post({ type: 'init', ...info });
+        this.post({ type: 'init', ...info, feature: this.pendingFeature });
         this.post({ type: 'settings', settings: this.settings });
         break;
       }
+      case 'convertPickImage':
+        await this.pickConvertImage();
+        break;
+      case 'convertLoadFromPath':
+        await this.loadConvertImage(msg.path);
+        break;
+      case 'convertSave':
+        await this.saveConvertResult(
+          msg.base64,
+          msg.suggestedName,
+          msg.mime,
+          msg.besidePath
+        );
+        break;
       case 'saveSettings':
         this.settings = await saveSettings(this.context, msg.settings);
         this.post({ type: 'settings', settings: this.settings });
@@ -268,7 +308,7 @@ export class ImageCompressPanel {
   } {
     const wasmRoot = resolveImageCompressWasmRoot(this.context.extensionPath);
     const workerScript = resolveImageCompressWorker(this.context.extensionPath);
-    if (!this.pool) {
+    if (!this.pool || this.pool.isClosed()) {
       this.pool = new WorkerPool({ workerScript });
     }
     return { wasmRoot, pool: this.pool };
@@ -492,21 +532,25 @@ export class ImageCompressPanel {
           return;
         }
         const item = selected[index];
-        this.post({
-          type: 'compressProgress',
-          done: completed,
-          total: selected.length,
-          current: item.relativePath,
-        });
-        try {
-          results[index] = await compressWithRetry(item, index);
-          completed += 1;
+        if (!this.cancelling) {
           this.post({
             type: 'compressProgress',
             done: completed,
             total: selected.length,
             current: item.relativePath,
           });
+        }
+        try {
+          results[index] = await compressWithRetry(item, index);
+          completed += 1;
+          if (!this.cancelling) {
+            this.post({
+              type: 'compressProgress',
+              done: completed,
+              total: selected.length,
+              current: item.relativePath,
+            });
+          }
         } catch (err) {
           if (this.cancelling || (err instanceof Error && err.message === 'cancelled')) {
             return;
@@ -615,7 +659,15 @@ export class ImageCompressPanel {
         targetWidth: item.targetWidth,
         targetHeight: item.targetHeight,
         wasmRoot,
+      }).catch((err: unknown) => {
+        if (this.cancelling || (err instanceof Error && err.message === 'cancelled')) {
+          return null;
+        }
+        throw err;
       });
+      if (!response) {
+        break;
+      }
 
       done += 1;
       this.post({
@@ -745,7 +797,15 @@ export class ImageCompressPanel {
         targetWidth,
         targetHeight,
         wasmRoot,
+      }).catch((err: unknown) => {
+        if (this.cancelling || (err instanceof Error && err.message === 'cancelled')) {
+          return null;
+        }
+        throw err;
       });
+      if (!response) {
+        break;
+      }
 
       if (!response.ok || response.error === 'skipped-larger' || !response.outputPath) {
         // 体积 ≥ 原图，降低质量
@@ -882,7 +942,15 @@ export class ImageCompressPanel {
         targetWidth: item.targetWidth,
         targetHeight: item.targetHeight,
         wasmRoot,
+      }).catch((err: unknown) => {
+        if (this.cancelling || (err instanceof Error && err.message === 'cancelled')) {
+          return null;
+        }
+        throw err;
       });
+      if (!response) {
+        break;
+      }
 
       this.post({
         type: 'compressProgress',
@@ -1002,14 +1070,113 @@ export class ImageCompressPanel {
     }
   }
 
+  private async pickConvertImage() {
+    const picked = await vscode.window.showOpenDialog({
+      canSelectFiles: true,
+      canSelectFolders: false,
+      canSelectMany: false,
+      filters: {
+        Images: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'ico'],
+      },
+      openLabel: '选择图片',
+    });
+    if (!picked?.[0]) {
+      return;
+    }
+    await this.loadConvertImage(picked[0].fsPath);
+  }
+
+  private async loadConvertImage(filePath: string) {
+    try {
+      const buf = fs.readFileSync(filePath);
+      const ext = path.extname(filePath).slice(1).toLowerCase();
+      const mime =
+        ext === 'jpg' || ext === 'jpeg'
+          ? 'image/jpeg'
+          : ext === 'png'
+            ? 'image/png'
+            : ext === 'webp'
+              ? 'image/webp'
+              : ext === 'gif'
+                ? 'image/gif'
+                : ext === 'bmp'
+                  ? 'image/bmp'
+                  : ext === 'ico'
+                    ? 'image/x-icon'
+                    : 'application/octet-stream';
+      const dataUrl = `data:${mime};base64,${buf.toString('base64')}`;
+      this.post({
+        type: 'convertImagePicked',
+        path: filePath,
+        name: path.basename(filePath),
+        dataUrl,
+      });
+    } catch (e) {
+      this.post({
+        type: 'toast',
+        level: 'error',
+        message: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }
+
+  private async saveConvertResult(
+    base64: string,
+    suggestedName: string,
+    _mime: string,
+    besidePath?: string
+  ) {
+    try {
+      const bytes = Buffer.from(base64, 'base64');
+      if (besidePath) {
+        const target = path.join(path.dirname(besidePath), suggestedName);
+        fs.writeFileSync(target, bytes);
+        this.post({ type: 'convertSaved', path: target });
+        return;
+      }
+
+      const defaultDir =
+        vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? os.homedir();
+      const defaultUri = vscode.Uri.file(path.join(defaultDir, suggestedName));
+      const ext = path.extname(suggestedName).slice(1).toLowerCase() || 'png';
+      const uri = await vscode.window.showSaveDialog({
+        defaultUri,
+        filters: {
+          Image: [ext],
+        },
+        saveLabel: '保存转化结果',
+      });
+      if (!uri) {
+        this.post({ type: 'convertSaveError', message: '已取消保存' });
+        return;
+      }
+      fs.writeFileSync(uri.fsPath, bytes);
+      this.post({ type: 'convertSaved', path: uri.fsPath });
+    } catch (e) {
+      this.post({
+        type: 'convertSaveError',
+        message: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }
+
   private getHtml(): string {
     const webview = this.panel.webview;
-    const webviewDir = resolveImageCompressWebviewDir(this.context.extensionPath);
+    const webviewDir = resolveWebviewDir(this.context.extensionPath);
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.file(path.join(webviewDir, 'main.js'))
     );
-    const styleUri = webview.asWebviewUri(
-      vscode.Uri.file(path.join(webviewDir, 'styles.css'))
+    const baseCssUri = webview.asWebviewUri(
+      vscode.Uri.file(path.join(webviewDir, 'base.css'))
+    );
+    const compressCssUri = webview.asWebviewUri(
+      vscode.Uri.file(path.join(webviewDir, 'compress.css'))
+    );
+    const icoCssUri = webview.asWebviewUri(
+      vscode.Uri.file(path.join(webviewDir, 'ico.css'))
+    );
+    const base64CssUri = webview.asWebviewUri(
+      vscode.Uri.file(path.join(webviewDir, 'base64.css'))
     );
     const nonce = getNonce();
 
@@ -1019,8 +1186,11 @@ export class ImageCompressPanel {
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} data: file: blob:; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link href="${styleUri}" rel="stylesheet" />
-  <title>ImgDo · 图片压缩</title>
+  <link href="${baseCssUri}" rel="stylesheet" />
+  <link href="${compressCssUri}" rel="stylesheet" />
+  <link href="${icoCssUri}" rel="stylesheet" />
+  <link href="${base64CssUri}" rel="stylesheet" />
+  <title>ImgDo</title>
 </head>
 <body>
   <div id="app"></div>
@@ -1030,7 +1200,7 @@ export class ImageCompressPanel {
   }
 
   public dispose() {
-    ImageCompressPanel.current = undefined;
+    ImgDoPanel.current = undefined;
     void this.pool?.dispose();
     this.panel.dispose();
     while (this.disposables.length) {

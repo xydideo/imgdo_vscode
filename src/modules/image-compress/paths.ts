@@ -17,7 +17,3 @@ export function resolveImageCompressWorker(extensionPath: string): string {
 export function resolveImageCompressWasmRoot(extensionPath: string): string {
   return path.join(extensionPath, IMAGE_COMPRESS_OUT_DIR, 'wasm');
 }
-
-export function resolveImageCompressWebviewDir(extensionPath: string): string {
-  return path.join(extensionPath, IMAGE_COMPRESS_OUT_DIR, 'webview');
-}

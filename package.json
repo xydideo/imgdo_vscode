@@ -1,7 +1,7 @@
 {
   "name": "imgdo",
   "displayName": "ImgDo",
-  "description": "Vscode插件ImgDo — 可扩展的图片工具集（当前含：项目图片压缩、一键替换）",
+  "description": "Vscode插件ImgDo — 可扩展的图片工具集（图片压缩、ICO 生成、Base64 转化）",
   "version": "0.1.1",
   "publisher": "xydideo",
   "author": "xydideo",
@@ -19,7 +19,10 @@
   ],
   "activationEvents": [
     "onCommand:imageCompress.openPanel",
-    "onCommand:imageCompress.openFolder"
+    "onCommand:imageCompress.openFolder",
+    "onCommand:imageIco.openPanel",
+    "onCommand:imageBase64.openPanel",
+    "onCommand:imageConvert.openPanel"
   ],
   "main": "./ImgDo/extension.js",
   "contributes": {
@@ -32,6 +35,21 @@
       {
         "command": "imageCompress.openFolder",
         "title": "在图片压缩中打开",
+        "category": "ImgDo"
+      },
+      {
+        "command": "imageIco.openPanel",
+        "title": "打开 ICO 生成",
+        "category": "ImgDo"
+      },
+      {
+        "command": "imageBase64.openPanel",
+        "title": "打开 Base64 转化",
+        "category": "ImgDo"
+      },
+      {
+        "command": "imageConvert.openPanel",
+        "title": "打开 ICO 生成",
         "category": "ImgDo"
       }
     ],

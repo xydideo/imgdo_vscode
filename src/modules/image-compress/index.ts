@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 import type { ExtensionModule } from '../../core/module';
-import { ImageCompressPanel } from './panel/ImageCompressPanel';
+import { ImgDoPanel } from '../../shell/panel/ImgDoPanel';
 
 /**
  * 图片压缩功能模块。
- * 命令、面板、Worker、Webview 均收敛在本目录，不污染主入口。
+ * 仅注册压缩相关命令；打开面板时路由到 compress。
  */
 export const imageCompressModule: ExtensionModule = {
   id: 'image-compress',
@@ -12,7 +12,7 @@ export const imageCompressModule: ExtensionModule = {
   activate(context) {
     context.subscriptions.push(
       vscode.commands.registerCommand('imageCompress.openPanel', () => {
-        ImageCompressPanel.createOrShow(context);
+        ImgDoPanel.createOrShow(context, undefined, 'compress');
       })
     );
 
@@ -20,7 +20,7 @@ export const imageCompressModule: ExtensionModule = {
       vscode.commands.registerCommand(
         'imageCompress.openFolder',
         (uri?: vscode.Uri) => {
-          ImageCompressPanel.createOrShow(context, uri?.fsPath);
+          ImgDoPanel.createOrShow(context, uri?.fsPath, 'compress');
         }
       )
     );
